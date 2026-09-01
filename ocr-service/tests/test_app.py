@@ -62,3 +62,39 @@ def test_ocr_exception_returns_500(client):
 
     assert resp.status_code == 500
     assert "poppler missing" in resp.get_json()["error"]
+
+
+def test_default_engine_is_tesseract(client):
+    with patch.object(ocr_app, "Image") as mock_image_cls, \
+         patch.object(ocr_app.pytesseract, "image_to_string", return_value="text") as mock_ocr:
+        mock_image_cls.open.return_value = object()
+        data = {"file": (io.BytesIO(b"\x89PNG fake"), "scan.png")}
+        resp = client.post("/ocr", data=data, content_type="multipart/form-data")
+
+    assert resp.get_json()["engine"] == "tesseract"
+    mock_ocr.assert_called_once()
+
+
+def test_easyocr_engine_used_when_requested(client):
+    fake_reader = type("FakeReader", (), {"readtext": lambda self, arr, detail, paragraph: ["line one", "line two"]})()
+    with patch.object(ocr_app, "Image") as mock_image_cls, \
+         patch.object(ocr_app, "_get_easyocr_reader", return_value=fake_reader) as mock_get_reader, \
+         patch.object(ocr_app.pytesseract, "image_to_string") as mock_tesseract:
+        mock_image_cls.open.return_value = type("FakeImg", (), {"convert": lambda self, mode: self})()
+        data = {"file": (io.BytesIO(b"\x89PNG fake"), "scan.png"), "engine": "easyocr"}
+        resp = client.post("/ocr", data=data, content_type="multipart/form-data")
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["text"] == "line one\nline two"
+    assert body["engine"] == "easyocr"
+    mock_get_reader.assert_called_once()
+    mock_tesseract.assert_not_called()
+
+
+def test_unknown_engine_returns_400(client):
+    data = {"file": (io.BytesIO(b"\x89PNG fake"), "scan.png"), "engine": "magic"}
+    resp = client.post("/ocr", data=data, content_type="multipart/form-data")
+
+    assert resp.status_code == 400
+    assert "magic" in resp.get_json()["error"]

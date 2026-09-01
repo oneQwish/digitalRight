@@ -23,7 +23,7 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        224,
+        336,
         40
       ],
       "id": "aee57c66-cd4a-4d52-9252-56f1401625b6",
@@ -31,13 +31,12 @@
     },
     {
       "parameters": {
-        "value": "={{ $json.fileName }}{{ $json.fileSize }}",
-        "dataPropertyName": "name_hash"
+        "jsCode": ""
       },
-      "type": "n8n-nodes-base.crypto",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        560,
         40
       ],
       "id": "810747e6-1bcf-4d6a-8e68-e793dd24acb5",
@@ -218,6 +217,11 @@
               "parameterType": "formBinaryData",
               "name": "file",
               "inputDataFieldName": "data"
+            },
+            {
+              "parameterType": "formData",
+              "name": "engine",
+              "value": "={{ $('OCR Engine').first().json.ocr_engine }}"
             }
           ]
         },
@@ -470,6 +474,29 @@
         2464,
         -128
       ]
+    },
+    {
+      "id": "4202ed60-6371-4035-9f5f-9453614e1ce9",
+      "name": "OCR Engine",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        112,
+        40
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "705b249c-3603-4bb8-96e4-c5d4fd9b7e12",
+              "name": "ocr_engine",
+              "value": "tesseract",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -477,7 +504,7 @@
       "main": [
         [
           {
-            "node": "Read/Write Files from Disk",
+            "node": "OCR Engine",
             "type": "main",
             "index": 0
           }
@@ -630,6 +657,17 @@
         [
           {
             "node": "Insert rows in a table2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR Engine": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
             "type": "main",
             "index": 0
           }

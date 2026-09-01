@@ -23,7 +23,7 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        224,
+        336,
         40
       ],
       "id": "aee57c66-cd4a-4d52-9252-56f1401625b6",
@@ -31,13 +31,12 @@
     },
     {
       "parameters": {
-        "value": "={{ $json.fileName }}{{ $json.fileSize }}",
-        "dataPropertyName": "name_hash"
+        "jsCode": "const crypto = require('crypto');\nconst fs = require('fs');\n\n// Считаем хэш точно так же, как позже \"PDF to Images\" (sha256(fileName + реальный\n// размер в байтах, из fs.statSync)). Раньше этот шаг делала встроенная нода\n// n8n Crypto: она хэшировала fileName + $json.fileSize, а fileSize у\n// Read/Write Files from Disk — отформатированная строка вида \"1.42 kB\", а не\n// число байт. В итоге хэш из дедуп-проверки никогда не совпадал с тем, что\n// реально лежит в file_hashes (он строился по числу байт) — дедупликация не\n// работала ни разу, каждый запуск перерабатывал весь inbox/ заново.\nreturn $input.all().map(item => {\n  const fileName = item.json.fileName;\n  const filePath = `/home/node/.n8n-files/lawyer_inbox/${fileName}`;\n  const fileSize = fs.statSync(filePath).size;\n  const name_hash = crypto.createHash('sha256').update(fileName + String(fileSize)).digest('hex');\n  return { json: { ...item.json, name_hash } };\n});"
       },
-      "type": "n8n-nodes-base.crypto",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        560,
         40
       ],
       "id": "810747e6-1bcf-4d6a-8e68-e793dd24acb5",
@@ -218,6 +217,11 @@
               "parameterType": "formBinaryData",
               "name": "file",
               "inputDataFieldName": "data"
+            },
+            {
+              "parameterType": "formData",
+              "name": "engine",
+              "value": "={{ $('OCR Engine').first().json.ocr_engine }}"
             }
           ]
         },
@@ -474,7 +478,30 @@
       ]
     },
     {
-      "id": "14a999e6-0ef3-4b2b-a75f-70f8fb766e97",
+      "id": "4202ed60-6371-4035-9f5f-9453614e1ce9",
+      "name": "OCR Engine",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        112,
+        40
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "705b249c-3603-4bb8-96e4-c5d4fd9b7e12",
+              "name": "ocr_engine",
+              "value": "tesseract",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "908f2cb8-d396-4aae-9f13-a7a244b2284a",
       "name": "IF PDF Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -491,7 +518,7 @@
           },
           "conditions": [
             {
-              "id": "fb08db1d-52f5-4c5a-af8a-42dd79e5abf2",
+              "id": "f58469cf-8469-4076-9d74-6b228ffa7eee",
               "leftValue": "={{ $json._error }}",
               "rightValue": "",
               "operator": {
@@ -506,7 +533,7 @@
       }
     },
     {
-      "id": "dc28fb81-9c7a-4b41-aefd-673b6a81a140",
+      "id": "5648aa99-b90a-46ce-9ab0-d577f963f5e4",
       "name": "IF Extract Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -523,7 +550,7 @@
           },
           "conditions": [
             {
-              "id": "7b780327-a24d-471d-a2f6-30e56fe474d5",
+              "id": "a5144878-1744-491f-8d36-93e93169e663",
               "leftValue": "={{ $json._error }}",
               "rightValue": "",
               "operator": {
@@ -538,7 +565,7 @@
       }
     },
     {
-      "id": "864144e6-e330-4248-a2c6-739b0a30c3e8",
+      "id": "bbe8539d-6cc2-4463-910e-d56f631daf35",
       "name": "Log Error",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -562,7 +589,7 @@
       }
     },
     {
-      "id": "a4a8e2ee-e492-4df9-8726-0b98896cf860",
+      "id": "88752d26-1bc8-44e0-a044-6812b877eaa9",
       "name": "Notify Error",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -598,7 +625,7 @@
       }
     },
     {
-      "id": "a7a1730b-09d6-4b97-8bcc-ba366566695a",
+      "id": "4270bd6c-af25-49aa-b7b9-5a1ba9abd6b9",
       "name": "Notify Success",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -639,7 +666,7 @@
       "main": [
         [
           {
-            "node": "Read/Write Files from Disk",
+            "node": "OCR Engine",
             "type": "main",
             "index": 0
           }
@@ -792,6 +819,17 @@
         [
           {
             "node": "IF Extract Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR Engine": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
             "type": "main",
             "index": 0
           }

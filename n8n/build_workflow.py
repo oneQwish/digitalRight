@@ -26,6 +26,7 @@ CODE_DIR = HERE / "code"
 OUTPUT   = HERE / "legal-pipeline.workflow.json"
 
 CODE_FILES = {
+    "Crypto": "compute_file_hash.js",
     "PDF to Images": "pdf_to_images.js",
     "Aggregate text": "aggregate_text.js",
     "Extract Fields": "extract_fields.js",

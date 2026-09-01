@@ -1,7 +1,8 @@
 # Legal Tech Pipeline
 
 Автоматическая обработка PDF судебных документов: юрист кладёт файл в `inbox/`,
-n8n прогоняет его через OCR (Tesseract) и regex-экстрактор полей, результат
+n8n прогоняет его через OCR (Tesseract или EasyOCR — переключается прямо в
+workflow, см. `ЭКСПЛУАТАЦИЯ.md` §2) и regex-экстрактор полей, результат
 попадает в PostgreSQL (`legal_db`, с pgvector и полнотекстовым поиском),
 уведомления об успехе/ошибке приходят через ntfy.
 
@@ -46,7 +47,7 @@ docker exec legal-n8n n8n import:workflow --input=/tmp/legal-pipeline.workflow.j
 ```
 ├── docker-compose.yaml   # 4 контейнера: postgres, n8n, tesseract-api, ntfy
 ├── Dockerfile            # сборка n8n-образа (+ pdftoppm из poppler-utils)
-├── ocr-service/          # Flask-обёртка над Tesseract (сервис tesseract-api)
+├── ocr-service/          # Flask-обёртка: Tesseract + EasyOCR (сервис tesseract-api)
 ├── db/
 │   ├── init.sql          # схема legal_db — единственный источник истины
 │   ├── import_courts.py  # импорт справочника судов из выгрузки 1С
