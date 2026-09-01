@@ -93,7 +93,9 @@ def make_notify_node(node_name: str, topic: str, title_expr: str,
         "position": [x, y],
         "parameters": {
             "method": "POST",
-            "url": f"http://ntfy:8080/{topic}",
+            # Внутри docker-сети ntfy слушает 80, а не 8080 — 8080 это только
+            # хостовый порт из docker-compose.yaml ("8080:80").
+            "url": f"http://ntfy:80/{topic}",
             "sendBody": True,
             "contentType": "raw",
             "rawContentType": "text/plain",
