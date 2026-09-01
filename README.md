@@ -27,12 +27,12 @@ docker compose ps   # legal-postgres должен стать (healthy)
 # 4. Импортировать справочник судов
 python3 db/import_courts.py | docker exec -i legal-postgres psql -U "$POSTGRES_USER" -d legal_db
 
-# 5. Импортировать workflow в n8n
-#    открыть http://localhost:5678 → Workflows → Import from File →
-#    выбрать n8n/legal-pipeline.workflow.json
-#    затем создать Postgres-credential (Credentials → New → Postgres,
-#    имя legal_db) и привязать её к трём Postgres-нодам workflow —
-#    credential не переносится автоматически при импорте.
+# 5. Импортировать workflow в n8n (без захода в браузер)
+docker cp "n8n/legal-pipeline.workflow.json" legal-n8n:/tmp/legal-pipeline.workflow.json
+docker exec legal-n8n n8n import:workflow --input=/tmp/legal-pipeline.workflow.json
+#    затем в http://localhost:5678 создать Postgres-credential
+#    (Credentials → New → Postgres, имя legal_db) и привязать её к трём
+#    Postgres-нодам workflow — credential не переносится автоматически.
 
 # 6. Проверить пайплайн
 #    положить тестовый PDF в inbox/, открыть workflow «legal-pipeline»,

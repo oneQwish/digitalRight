@@ -1,4 +1,5 @@
 {
+  "id": "1c2089a3fa8a4eeb",
   "name": "legal-pipeline",
   "nodes": [
     {
@@ -473,7 +474,7 @@
       ]
     },
     {
-      "id": "c32189e1-b40e-45e6-816e-f732ec47ce39",
+      "id": "a6f7fc8d-9813-4e7c-b771-f7d68192950f",
       "name": "IF PDF Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -490,7 +491,7 @@
           },
           "conditions": [
             {
-              "id": "e099b8a3-ffa6-4ac0-a7c0-02e42aa14c09",
+              "id": "24123340-cc5d-4eb9-bf00-2caf0e74fcb5",
               "leftValue": "={{ $json._error }}",
               "rightValue": "",
               "operator": {
@@ -505,7 +506,7 @@
       }
     },
     {
-      "id": "4bebe3be-a71f-42dd-8a13-c1186195a1cf",
+      "id": "2184fc8b-44ec-435c-a165-1934c15f0207",
       "name": "IF Extract Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -522,7 +523,7 @@
           },
           "conditions": [
             {
-              "id": "9e23bdaf-4817-4aa5-a46f-466f1a638c65",
+              "id": "eb5cb75f-30ec-460d-af87-ee84bf67d60f",
               "leftValue": "={{ $json._error }}",
               "rightValue": "",
               "operator": {
@@ -537,7 +538,7 @@
       }
     },
     {
-      "id": "a197bce9-7d17-4da7-af9e-d762d7d02582",
+      "id": "a0064137-9e7a-4e47-8d54-e536e83d5e63",
       "name": "Log Error",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -561,7 +562,7 @@
       }
     },
     {
-      "id": "28034ac0-2cf1-4041-839d-c0a3dd382452",
+      "id": "ac4bf78c-978b-48b6-b32f-827fbeb23b90",
       "name": "Notify Error",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -597,7 +598,7 @@
       }
     },
     {
-      "id": "58e412f7-c675-4e94-b39f-12cd8f58cafe",
+      "id": "03108a62-e9b8-4b69-9c68-c401baea50e3",
       "name": "Notify Success",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
