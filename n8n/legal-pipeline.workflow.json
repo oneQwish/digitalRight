@@ -1,0 +1,863 @@
+{
+  "name": "legal-pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        40
+      ],
+      "id": "afc43829-3819-4139-bc8a-8cd5501886d2",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/node/.n8n-files/lawyer_inbox/*",
+        "options": {
+          "fileExtension": "pdf"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        40
+      ],
+      "id": "aee57c66-cd4a-4d52-9252-56f1401625b6",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "value": "={{ $json.fileName }}{{ $json.fileSize }}",
+        "dataPropertyName": "name_hash"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        448,
+        40
+      ],
+      "id": "810747e6-1bcf-4d6a-8e68-e793dd24acb5",
+      "name": "Crypto"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT hash FROM file_hashes",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        -128
+      ],
+      "id": "6038a85f-7a6d-4929-91b6-9e12f2b2fd0e",
+      "name": "Execute a SQL query1",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "tEUhsjqUEjpEuLzS",
+          "name": "legal_db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "hash",
+              "field2": "file_hash"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.compareDatasets",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -88
+      ],
+      "id": "c931677e-cde7-4184-8f1b-d4d1b750425b",
+      "name": "Compare Datasets"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "file_hashes",
+          "mode": "list",
+          "cachedResultName": "file_hashes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "hash": "={{ $('Aggregate text').item.json.name_hash }}",
+            "filename": "={{ $('Aggregate text').item.json.source_filename }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "hash",
+              "displayName": "hash",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "filename",
+              "displayName": "filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "queryBatching": "single",
+          "skipOnConflict": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2912,
+        -56
+      ],
+      "id": "ee871b46-b6bf-4b9b-9a16-38c3d9fc1157",
+      "name": "Insert rows in a table",
+      "executeOnce": false,
+      "retryOnFail": false,
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "tEUhsjqUEjpEuLzS",
+          "name": "legal_db"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "709e2864-0147-4637-bbbc-57758be04bbb",
+              "name": "file_hash",
+              "value": "={{ $json.name_hash }}",
+              "type": "string"
+            },
+            {
+              "id": "80696d40-4bc8-4092-8e6a-326cbfd3d430",
+              "name": "fileName",
+              "value": "={{ $json.fileName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        -56
+      ],
+      "id": "402141df-267a-4247-8256-6da8e364fc30",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://tesseract:9091/ocr",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 1500000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2016,
+        -128
+      ],
+      "id": "f7b6d5e9-eb64-4df3-be67-7da3dbaec263",
+      "name": "HTTP Request1",
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/home/node/.n8n-files/lawyer_inbox/{{ $json.fileName }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        -56
+      ],
+      "id": "5e522f25-46b3-4cd7-9537-ff282d387f4e",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const { execFileSync } = require('child_process');\nconst fs = require('fs');\nconst crypto = require('crypto');\n\nlet fileName = 'unknown';\ntry {\n  const item = $input.first();\n  const binaryKey = Object.keys(item.binary)[0];\n  const bin = item.binary[binaryKey];\n  fileName = bin.fileName;\n\n  if (!fileName) throw new Error('bin.fileName пустой');\n  const pdfPath = `/home/node/.n8n-files/lawyer_inbox/${fileName}`;\n  if (!fs.existsSync(pdfPath)) throw new Error(`PDF не найден: ${pdfPath}`);\n\n  const fileSize = fs.statSync(pdfPath).size;\n  const nameHash = crypto.createHash('sha256')\n    .update(fileName + String(fileSize))\n    .digest('hex');\n\n  const shortHash = crypto.createHash('sha1').update(fileName).digest('hex').slice(0, 10);\n  const tmpDir = `/tmp/n8n_pdf_${shortHash}`;\n  const pagePrefix = `${tmpDir}/page`;\n\n  if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true, force: true });\n  fs.mkdirSync(tmpDir);\n\n  try {\n    execFileSync('pdftoppm', ['-r', '150', '-png', pdfPath, pagePrefix], { timeout: 300_000 });\n  } catch (err) {\n    fs.rmSync(tmpDir, { recursive: true, force: true });\n    const stderr = err.stderr instanceof Buffer ? err.stderr.toString() : (err.stderr ?? err.message);\n    throw new Error(`pdftoppm: ${stderr || err.message}`);\n  }\n\n  const pngFiles = fs.readdirSync(tmpDir).filter(f => f.endsWith('.png')).sort();\n  if (pngFiles.length === 0) {\n    fs.rmSync(tmpDir, { recursive: true, force: true });\n    throw new Error('pdftoppm не создал ни одного PNG');\n  }\n\n  return pngFiles.map((filename, i) => ({\n    json: { page: i + 1, totalPages: pngFiles.length, sourceFile: fileName, tmpDir, name_hash: nameHash },\n    binary: {\n      data: {\n        data: fs.readFileSync(`${tmpDir}/${filename}`).toString('base64'),\n        mimeType: 'image/png',\n        fileName: filename,\n      },\n    },\n  }));\n\n} catch (e) {\n  return [{ json: { _error: true, stage: 'pdf_to_images', message: e.message, source_filename: fileName } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        -128
+      ],
+      "id": "5f73ca27-8879-47d7-82a8-ca51ed65cc42",
+      "name": "PDF to Images",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\n\nlet fileName = 'unknown';\ntry {\n  const items    = $input.all();\n  const pdfItems = $('PDF to Images').all();\n\n  const firstMeta = pdfItems[0]?.json ?? {};\n  fileName        = firstMeta.sourceFile || '';\n  const tmpDir    = firstMeta.tmpDir     || '';\n  const nameHash  = firstMeta.name_hash  || '';\n\n  // Split OCR results into successful and failed pages\n  const okItems  = items.filter(i => !i.json.error && !i.json._error);\n  const badItems = items.filter(i =>  i.json.error ||  i.json._error);\n\n  if (okItems.length === 0) {\n    if (tmpDir.startsWith('/tmp/')) {\n      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}\n    }\n    throw new Error(`OCR провалился на всех ${items.length} страниц(е/ах)`);\n  }\n\n  const sorted = okItems.map((item, i) => ({\n    ocrJson: item.json,\n    page: pdfItems[i]?.json?.page ?? (i + 1),\n  })).sort((a, b) => a.page - b.page);\n\n  const fullText = sorted\n    .map(pair => (pair.ocrJson.text ?? pair.ocrJson.body?.text ?? '').trim())\n    .filter(t => t.length > 0)\n    .join('\\n\\n');\n\n  if (tmpDir.startsWith('/tmp/')) {\n    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}\n  }\n\n  const dateMatch  = fileName.match(/^(\\d{4}-\\d{2}-\\d{2})/);\n  const receivedAt = dateMatch ? dateMatch[1] : null;\n\n  const fl = fileName.toLowerCase();\n  let documentType = 'прочее';\n  if      (fl.includes('решени'))     documentType = 'решение';\n  else if (fl.includes('апелляц'))    documentType = 'апелляция';\n  else if (fl.includes('определени')) documentType = 'определение';\n  else if (fl.includes('кассац'))     documentType = 'кассация';\n  else if (fl.includes('иск'))        documentType = 'иск';\n\n  return [{\n    json: {\n      document_type:       documentType,\n      source_filename:     fileName,\n      raw_text:            fullText,\n      received_at:         receivedAt,\n      total_pages:         pdfItems.length,\n      name_hash:           nameHash,\n      _ocr_partial:        badItems.length > 0,\n      _ocr_failed_pages:   badItems.length,\n    }\n  }];\n\n} catch (e) {\n  return [{ json: { _error: true, stage: 'aggregate_text', message: e.message, source_filename: fileName } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -128
+      ],
+      "id": "0a925240-3b06-4fe9-ae5a-315058c1d7a6",
+      "name": "Aggregate text"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "document_type": "={{ $json.document_type }}",
+            "source_filename": "={{ $json.source_filename }}",
+            "raw_text": "={{ $json.raw_text }}",
+            "processed_at": "={{ new Date().toISOString() }}",
+            "received_at": "={{ $json.received_at }}",
+            "extracted_data": "={{ JSON.stringify($json.extracted_data) }}",
+            "extraction_confidence": "={{ JSON.stringify($json.extraction_confidence) }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "document_type",
+              "displayName": "document_type",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source_filename",
+              "displayName": "source_filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "raw_text",
+              "displayName": "raw_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "extracted_data",
+              "displayName": "extracted_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "embedding",
+              "displayName": "embedding",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ocr_confidence",
+              "displayName": "ocr_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "processed_at",
+              "displayName": "processed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "extraction_confidence",
+              "displayName": "extraction_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2688,
+        -128
+      ],
+      "id": "5d6281ff-1d0c-4a97-9cab-79bce46cc0e3",
+      "name": "Insert rows in a table2",
+      "credentials": {
+        "postgres": {
+          "id": "tEUhsjqUEjpEuLzS",
+          "name": "legal_db"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1568,
+        -56
+      ],
+      "id": "bf276efc-f96c-4bf2-a015-55d13e3c404b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "let _source_filename = 'unknown';\ntry {\n\n// ── Regex-экстрактор полей для российских судебных документов ────────────────\n// Важно: \\w в JS не матчит кириллицу — везде используем явные диапазоны [а-яёА-ЯЁ]\n\nconst items = $input.all();\n\nconst MONTHS = {\n  'января':1,'февраля':2,'марта':3,'апреля':4,'мая':5,'июня':6,\n  'июля':7,'августа':8,'сентября':9,'октября':10,'ноября':11,'декабря':12,\n};\n\nfunction firstMatch(text, patterns) {\n  for (const { re, score } of patterns) {\n    const m = text.match(re);\n    if (m) {\n      const val = (m[1] ?? m[0]).trim().replace(/\\s{2,}/g, ' ');\n      if (val) return { value: val, score };\n    }\n  }\n  return { value: null, score: 0 };\n}\n\nfunction extractFields(raw) {\n  const text = raw || '';\n  const head = text.slice(0, 600);\n\n  const docType = (() => {\n    const h = head.toUpperCase().replace(/\\s+/g, ' ');\n    if (/АПЕЛЛЯЦИОННОЕ ОПРЕДЕЛЕНИЕ/.test(h))  return { value: 'апелляция',   score: 0.97 };\n    if (/КАССАЦИОННОЕ ОПРЕДЕЛЕНИЕ/.test(h))   return { value: 'кассация',    score: 0.97 };\n    if (/АПЕЛЛЯЦИОННОЕ РЕШЕНИЕ/.test(h))      return { value: 'апелляция',   score: 0.95 };\n    if (/ИСКОВОЕ ЗАЯВЛЕНИЕ/.test(h))          return { value: 'иск',         score: 0.97 };\n    if (/ПРЕТЕНЗИЯ/.test(h))                  return { value: 'претензия',   score: 0.95 };\n    if (/Р\\s*Е\\s*Ш\\s*Е\\s*Н\\s*И\\s*Е/.test(h) || /\\bРЕШЕНИЕ\\b/.test(h))\n                                              return { value: 'решение',     score: 0.95 };\n    if (/О\\s*П\\s*Р\\s*Е\\s*Д\\s*Е\\s*Л\\s*Е\\s*Н\\s*И\\s*Е/.test(h) || /\\bОПРЕДЕЛЕНИЕ\\b/.test(h))\n                                              return { value: 'определение', score: 0.95 };\n    return { value: null, score: 0 };\n  })();\n\n  const caseNumber = firstMatch(text, [\n    { re: /(?:дело|Дело)\\s*№?\\s*([АA]?\\d{1,2}[-–]\\d{3,7}[\\/\\-]\\d{2,4})/i, score: 0.96 },\n    { re: /\\b([АA]\\d{2}[-–]\\d{3,7}[\\/\\-]\\d{2,4})\\b/,                       score: 0.93 },\n    { re: /\\b(\\d{1,2}[-–]\\d{3,7}[\\/\\-]\\d{4})\\b/,                           score: 0.88 },\n  ]);\n\n  const decisionDate = (() => {\n    const re = /«?(\\d{1,2})»?\\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\\s+(\\d{4})/i;\n    const m  = text.match(re);\n    if (m) {\n      const mon = MONTHS[m[2].toLowerCase()];\n      const iso = `${m[3]}-${String(mon).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;\n      return { value: iso, score: 0.96 };\n    }\n    return { value: null, score: 0 };\n  })();\n\n  const FIO_RU  = '[А-ЯЁ][а-яё]{2,}\\\\s+[А-ЯЁ]\\\\.[А-ЯЁ]\\\\.';\n  const IO_FAM  = '[А-ЯЁ]\\\\.[А-ЯЁ]\\\\.\\\\s+[А-ЯЁ][а-яё]{2,}';\n  const PRED    = 'председательствующ[а-яё]+\\\\s+судьи?';\n  const SOSTAV  = 'в\\\\s+составе\\\\s+судьи?';\n  const SUDYA   = '(?:^|\\\\n)\\\\s*[Сс]удья\\\\s+';\n\n  const judgeName = firstMatch(text, [\n    { re: new RegExp(`(?:${PRED}|${SOSTAV})\\\\s+(${FIO_RU})`),  score: 0.93 },\n    { re: new RegExp(`(?:${PRED}|${SOSTAV})\\\\s+(${IO_FAM})`),  score: 0.93 },\n    { re: new RegExp(`${SUDYA}(${FIO_RU})`, 'm'),               score: 0.90 },\n    { re: new RegExp(`${SUDYA}(${IO_FAM})`, 'm'),               score: 0.90 },\n    { re: /[Сс]удьи?\\s*:?\\s+([А-ЯЁ][а-яё]{2,}\\s+[А-ЯЁ]\\.[А-ЯЁ]\\.)/i, score: 0.83 },\n    { re: /[Сс]удьи?\\s*:?\\s+([А-ЯЁ]\\.[А-ЯЁ]\\.\\s+[А-ЯЁ][а-яё]{2,})/i, score: 0.83 },\n  ]);\n\n  const courtName = firstMatch(head, [\n    { re: /([А-ЯЁ][а-яёА-ЯЁ\\s\\-]+?(?:районный|городской|арбитражный|апелляционный|кассационный)\\s+суд(?:\\s+(?:города?|г\\.)\\s+[А-ЯЁ][а-яё]+)?)/i, score: 0.82 },\n  ]);\n\n  const plaintiff = firstMatch(text, [\n    { re: /(?:^|\\n)\\s*[Ии]стец[ыеуа]?\\s*:?\\s+([^\\n,;]{5,120})/m, score: 0.82 },\n    { re: /по\\s+иску\\s+([^,\\n]{5,80}?)\\s+к\\s+/i,                 score: 0.74 },\n  ]);\n  const defendant = firstMatch(text, [\n    { re: /(?:^|\\n)\\s*[Оо]тветчик[иа]?\\s*:?\\s+([^\\n,;]{5,120})/m, score: 0.82 },\n  ]);\n\n  const amounts = (() => {\n    const isSolidary = /солидарно/i.test(text);\n    const normalize  = s => parseFloat(s.replace(/\\s/g, '').replace(',', '.'));\n    const re = /взыскать[^.;]{0,400}?([\\d][\\d\\s]{1,15}(?:,\\d{1,2})?)\\s*(?:рублей|рубля|руб\\.)/gi;\n    const found = [];\n    let m;\n    while ((m = re.exec(text)) !== null) {\n      const v = normalize(m[1]);\n      if (!isNaN(v) && v > 0 && v < 1e10) found.push(v);\n    }\n    if (!found.length) return { value: null, total: null, is_solidary: isSolidary, score: 0 };\n    const unique = [...new Set(found)];\n    const total  = isSolidary ? Math.max(...unique) : unique.reduce((a, b) => a + b, 0);\n    const score  = isSolidary         ? 0.52\n                 : unique.length === 1 ? 0.78\n                 :                       0.55;\n    return { value: unique, total, is_solidary: isSolidary, score };\n  })();\n\n  const extracted_data = {\n    case_number:         caseNumber.value,\n    decision_date:       decisionDate.value,\n    judge_name:          judgeName.value,\n    court_name:          courtName.value,\n    plaintiff:           plaintiff.value,\n    defendant:           defendant.value,\n    awarded_amounts_raw: amounts.value,\n    awarded_total:       amounts.total,\n    is_solidary:         amounts.is_solidary,\n  };\n\n  const extraction_confidence = {\n    document_type: { value: docType.value,     score: docType.score,     method: 'regex' },\n    case_number:   { value: caseNumber.value,  score: caseNumber.score,  method: 'regex' },\n    decision_date: { value: decisionDate.value,score: decisionDate.score, method: 'regex' },\n    judge_name:    { value: judgeName.value,   score: judgeName.score,   method: 'regex' },\n    court_name:    { value: courtName.value,   score: courtName.score,   method: 'regex' },\n    plaintiff:     { value: plaintiff.value,   score: plaintiff.score,   method: 'regex' },\n    defendant:     { value: defendant.value,   score: defendant.score,   method: 'regex' },\n    awarded_total: { value: amounts.total,     score: amounts.score,     method: 'regex' },\n  };\n\n  return { extracted_data, extraction_confidence, docType };\n}\n\nconst result = items.map(item => {\n  _source_filename = item.json.source_filename || 'unknown';\n  const { extracted_data, extraction_confidence, docType } = extractFields(item.json.raw_text);\n  const document_type = (docType.score >= 0.94)\n    ? docType.value\n    : (item.json.document_type || 'прочее');\n  return { json: { ...item.json, document_type, extracted_data, extraction_confidence } };\n});\nreturn result;\n\n} catch (e) {\n  return [{ json: { _error: true, stage: 'extract_fields', message: e.message, source_filename: _source_filename } }];\n}"
+      },
+      "id": "92a2f0fe-8c9c-4ac4-af6b-c5326adebb7b",
+      "name": "Extract Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        -128
+      ]
+    },
+    {
+      "id": "c32189e1-b40e-45e6-816e-f732ec47ce39",
+      "name": "IF PDF Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "e099b8a3-ffa6-4ac0-a7c0-02e42aa14c09",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "4bebe3be-a71f-42dd-8a13-c1186195a1cf",
+      "name": "IF Extract Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "9e23bdaf-4817-4aa5-a46f-466f1a638c65",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a197bce9-7d17-4da7-af9e-d762d7d02582",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2800,
+        280
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO processing_log (filename, stage, status, message) VALUES ($1, $2, 'error', $3) ON CONFLICT DO NOTHING",
+        "options": {
+          "queryBatching": "independently",
+          "queryReplacement": "={{ $json.source_filename || 'unknown' }},={{ $json.stage || 'unknown' }},={{ ($json.message || '').slice(0, 500) }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "legal_db"
+        }
+      }
+    },
+    {
+      "id": "28034ac0-2cf1-4041-839d-c0a3dd382452",
+      "name": "Notify Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3040,
+        280
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy:8080/legal-errors",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ ($json.stage || '') + ': ' + ($json.message || '') + '\\nФайл: ' + ($json.source_filename || '') }}",
+        "options": {
+          "headers": {
+            "values": [
+              {
+                "name": "Title",
+                "value": "={{ 'Ошибка: ' + ($json.stage || 'pipeline') }}"
+              },
+              {
+                "name": "Priority",
+                "value": "urgent"
+              },
+              {
+                "name": "Tags",
+                "value": "legal"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "58e412f7-c675-4e94-b39f-12cd8f58cafe",
+      "name": "Notify Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        -240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://ntfy:8080/legal-pipeline",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ ($json.source_filename || '') + ' — ' + ($json.document_type || 'unknown') }}",
+        "options": {
+          "headers": {
+            "values": [
+              {
+                "name": "Title",
+                "value": "Документ обработан"
+              },
+              {
+                "name": "Priority",
+                "value": "low"
+              },
+              {
+                "name": "Tags",
+                "value": "legal"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Crypto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Datasets": {
+      "main": [
+        [],
+        [],
+        [],
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF to Images": {
+      "main": [
+        [
+          {
+            "node": "IF PDF Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate text": {
+      "main": [
+        [
+          {
+            "node": "Extract Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table2": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "PDF to Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Fields": {
+      "main": [
+        [
+          {
+            "node": "IF Extract Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF PDF Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Extract Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Success": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "Notify Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}

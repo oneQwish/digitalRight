@@ -1,0 +1,7 @@
+inbox
+db_data
+ntfy_cache
+n8n_data
+.git
+node_modules
+*.log

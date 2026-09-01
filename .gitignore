@@ -1,0 +1,16 @@
+db_data/
+n8n_data/
+ntfy_cache/
+inbox/
+.env
+.ssh
+CLAUDE.md
+
+# Внешние данные (выгрузки из 1С и т.п.) — не код, не версионируются
+data/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
