@@ -16,6 +16,7 @@ n8n через REST API и не требует API-ключа — на выхо�
 """
 
 import json
+import os
 import uuid
 from pathlib import Path
 
@@ -29,6 +30,15 @@ CODE_FILES = {
     "Aggregate text": "aggregate_text.js",
     "Extract Fields": "extract_fields.js",
 }
+
+# Credential id-ы n8n не переносятся между инстансами (это нормальное поведение
+# n8n) — сборка всегда выпускает workflow с пустым id у Postgres-credential
+# "legal_db", кроме случаев, когда deployer явно передал id для СВОЕГО
+# инстанса через переменную окружения:
+#   N8N_PG_CREDENTIAL_ID=<id> python3 n8n/build_workflow.py
+# Найти id: Credentials → открыть "legal_db" → id виден в URL страницы,
+# либо в n8n_db: SELECT id, name FROM credentials_entity;
+PG_CREDENTIAL_ID = os.environ.get("N8N_PG_CREDENTIAL_ID", "")
 
 
 def uid() -> str:
@@ -79,7 +89,7 @@ def make_log_error_node(x: int, y: int) -> dict:
                 ),
             },
         },
-        "credentials": {"postgres": {"id": "", "name": "legal_db"}},
+        "credentials": {"postgres": {"id": PG_CREDENTIAL_ID, "name": "legal_db"}},
     }
 
 
@@ -120,7 +130,7 @@ def build() -> dict:
     nodes = wf["nodes"]
     conns = wf["connections"]
 
-    # ── 1. Inject JS bodies + onError on risky nodes ─────────────────────────
+    # ── 1. Inject JS bodies + onError on risky nodes + Postgres credential id ──
     for n in nodes:
         if n["name"] in CODE_FILES:
             n["parameters"]["jsCode"] = (CODE_DIR / CODE_FILES[n["name"]]).read_text(encoding="utf-8").rstrip("\n")
@@ -128,6 +138,8 @@ def build() -> dict:
             n["onError"] = "continueRegularOutput"
         if n["name"] == "Insert rows in a table2":
             n["onError"] = "continueRegularOutput"
+        if PG_CREDENTIAL_ID and "postgres" in n.get("credentials", {}):
+            n["credentials"]["postgres"]["id"] = PG_CREDENTIAL_ID
 
     # ── 2. Add error-handling nodes ──────────────────────────────────────────
     if_pdf      = make_if_error_node("IF PDF Error",     1920,  80)
@@ -148,28 +160,35 @@ def build() -> dict:
     nodes.extend([if_pdf, if_extract, log_error, notify_err, notify_ok])
 
     # ── 3. Rewire connections around the new IF/Notify nodes ────────────────
-    # PDF to Images → IF PDF Error → (error) Log Error / (ok) HTTP Request1
+    #
+    # Log Error / Notify Error / Notify Success are all side-effect nodes
+    # (Postgres INSERT / HTTP POST to ntfy) whose own *output* is that side
+    # effect's response — NOT the original document data. n8n replaces $json
+    # with a node's own output for whatever runs next, so chaining
+    # "IF Extract Error → Notify Success → Insert rows in a table2" fed the
+    # documents-insert node ntfy's HTTP response instead of the extracted
+    # fields (silently: onError=continueRegularOutput on that insert swallowed
+    # the resulting "document_type is required but not set" failure). Fix:
+    # every side-effect node is a parallel dead-end branch off the node that
+    # actually holds the data, never a link in the middle of the chain.
+
+    # PDF to Images → IF PDF Error → (error) Log Error + Notify Error
+    #                              → (ok)    HTTP Request1
     conns["PDF to Images"]["main"][0] = [{"node": "IF PDF Error", "type": "main", "index": 0}]
     conns["IF PDF Error"] = {"main": [
-        [{"node": "Log Error",     "type": "main", "index": 0}],
+        [{"node": "Log Error", "type": "main", "index": 0},
+         {"node": "Notify Error", "type": "main", "index": 0}],
         [{"node": "HTTP Request1", "type": "main", "index": 0}],
     ]}
 
-    # Extract Fields → IF Extract Error → (error) Log Error / (ok) Notify Success
+    # Extract Fields → IF Extract Error → (error) Log Error + Notify Error
+    #                                   → (ok)    Notify Success + Insert rows in a table2
     conns["Extract Fields"]["main"][0] = [{"node": "IF Extract Error", "type": "main", "index": 0}]
     conns["IF Extract Error"] = {"main": [
-        [{"node": "Log Error",      "type": "main", "index": 0}],
-        [{"node": "Notify Success", "type": "main", "index": 0}],
-    ]}
-
-    # Notify Success → Insert rows in a table2 (documents)
-    conns["Notify Success"] = {"main": [
-        [{"node": "Insert rows in a table2", "type": "main", "index": 0}],
-    ]}
-
-    # Log Error → Notify Error (dead-end, does not rejoin the main loop)
-    conns["Log Error"] = {"main": [
-        [{"node": "Notify Error", "type": "main", "index": 0}],
+        [{"node": "Log Error", "type": "main", "index": 0},
+         {"node": "Notify Error", "type": "main", "index": 0}],
+        [{"node": "Notify Success", "type": "main", "index": 0},
+         {"node": "Insert rows in a table2", "type": "main", "index": 0}],
     ]}
 
     return wf

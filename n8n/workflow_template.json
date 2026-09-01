@@ -61,7 +61,7 @@
       "executeOnce": true,
       "credentials": {
         "postgres": {
-          "id": "tEUhsjqUEjpEuLzS",
+          "id": "",
           "name": "legal_db"
         }
       }
@@ -171,7 +171,7 @@
       "notesInFlow": false,
       "credentials": {
         "postgres": {
-          "id": "tEUhsjqUEjpEuLzS",
+          "id": "",
           "name": "legal_db"
         }
       },
@@ -440,7 +440,7 @@
       "name": "Insert rows in a table2",
       "credentials": {
         "postgres": {
-          "id": "tEUhsjqUEjpEuLzS",
+          "id": "",
           "name": "legal_db"
         }
       }

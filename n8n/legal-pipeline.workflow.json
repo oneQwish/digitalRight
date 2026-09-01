@@ -61,7 +61,7 @@
       "executeOnce": true,
       "credentials": {
         "postgres": {
-          "id": "tEUhsjqUEjpEuLzS",
+          "id": "",
           "name": "legal_db"
         }
       }
@@ -171,7 +171,7 @@
       "notesInFlow": false,
       "credentials": {
         "postgres": {
-          "id": "tEUhsjqUEjpEuLzS",
+          "id": "",
           "name": "legal_db"
         }
       },
@@ -441,7 +441,7 @@
       "name": "Insert rows in a table2",
       "credentials": {
         "postgres": {
-          "id": "tEUhsjqUEjpEuLzS",
+          "id": "",
           "name": "legal_db"
         }
       },
@@ -474,7 +474,7 @@
       ]
     },
     {
-      "id": "991a89cc-bff5-4a37-aa94-c179adf4fd41",
+      "id": "14a999e6-0ef3-4b2b-a75f-70f8fb766e97",
       "name": "IF PDF Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -491,7 +491,7 @@
           },
           "conditions": [
             {
-              "id": "524bb218-683b-48d1-9138-3a7bb8713f8e",
+              "id": "fb08db1d-52f5-4c5a-af8a-42dd79e5abf2",
               "leftValue": "={{ $json._error }}",
               "rightValue": "",
               "operator": {
@@ -506,7 +506,7 @@
       }
     },
     {
-      "id": "31b2b29b-1f7b-4864-be73-e98479a7e14f",
+      "id": "dc28fb81-9c7a-4b41-aefd-673b6a81a140",
       "name": "IF Extract Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -523,7 +523,7 @@
           },
           "conditions": [
             {
-              "id": "a76161bc-a577-4287-9da9-316365cb93d2",
+              "id": "7b780327-a24d-471d-a2f6-30e56fe474d5",
               "leftValue": "={{ $json._error }}",
               "rightValue": "",
               "operator": {
@@ -538,7 +538,7 @@
       }
     },
     {
-      "id": "c0e63b86-f9d8-4a62-97a9-beec038f9783",
+      "id": "864144e6-e330-4248-a2c6-739b0a30c3e8",
       "name": "Log Error",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -562,7 +562,7 @@
       }
     },
     {
-      "id": "bb91a2b6-0b96-40ff-80db-dee1dc438faa",
+      "id": "a4a8e2ee-e492-4df9-8726-0b98896cf860",
       "name": "Notify Error",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -598,7 +598,7 @@
       }
     },
     {
-      "id": "dd72a6a5-1cbd-43a2-82e1-6bcb164f4e40",
+      "id": "a7a1730b-09d6-4b97-8bcc-ba366566695a",
       "name": "Notify Success",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -805,6 +805,11 @@
             "node": "Log Error",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Notify Error",
+            "type": "main",
+            "index": 0
           }
         ],
         [
@@ -823,6 +828,11 @@
             "node": "Log Error",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Notify Error",
+            "type": "main",
+            "index": 0
           }
         ],
         [
@@ -830,26 +840,9 @@
             "node": "Notify Success",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Notify Success": {
-      "main": [
-        [
+          },
           {
             "node": "Insert rows in a table2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Log Error": {
-      "main": [
-        [
-          {
-            "node": "Notify Error",
             "type": "main",
             "index": 0
           }

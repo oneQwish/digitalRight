@@ -31,8 +31,10 @@ python3 db/import_courts.py | docker exec -i legal-postgres psql -U "$POSTGRES_U
 docker cp "n8n/legal-pipeline.workflow.json" legal-n8n:/tmp/legal-pipeline.workflow.json
 docker exec legal-n8n n8n import:workflow --input=/tmp/legal-pipeline.workflow.json
 #    затем в http://localhost:5678 создать Postgres-credential
-#    (Credentials → New → Postgres, имя legal_db) и привязать её к трём
+#    (Credentials → New → Postgres, имя legal_db) и привязать её к четырём
 #    Postgres-нодам workflow — credential не переносится автоматически.
+#    Либо сразу собрать workflow с готовым id credential:
+#    N8N_PG_CREDENTIAL_ID=<id> python3 n8n/build_workflow.py
 
 # 6. Проверить пайплайн
 #    положить тестовый PDF в inbox/, открыть workflow «legal-pipeline»,
